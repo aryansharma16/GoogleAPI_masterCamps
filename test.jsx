@@ -1,3 +1,9 @@
+// in script tag 
+ // <Script src='../components/script/goodScript.js' />
+ //  <script async defer src="https://apis.google.com/js/api.js" ></script>
+ //   <script async defer src="https://accounts.google.com/gsi/client" ></script>
+ //<script src="https://apis.google.com/js/platform.js?onload=init" async defer></script>
+
 import React, { useState, useEffect } from "react";
 
 const test = () => {
