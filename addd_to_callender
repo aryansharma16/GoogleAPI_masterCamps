@@ -1,0 +1,296 @@
+import { useRouter } from "next/router";
+import submit from "./submit.module.css";
+import styles from "../../styles/global.module.css";
+import Button from "../button/button";
+import { useEffect, useState } from "react";
+import {
+  GoogleLogin,
+  GoogleOAuthProvider,
+  useGoogleLogin,
+} from "@react-oauth/google";
+
+export default function SubmitSuccess({ lightTheme, eventData }) {
+  console.log(eventData, "event data from callemnder");
+  const { pathname } = useRouter();
+  const [addedCallender, setAddedCallender] = useState(false);
+  // for event time adjust
+  const eventDate = eventData?.eventDate; // Example eventDate
+  const fromTime = eventData?.fromTime; // Example fromTime
+  const toTime = eventData?.toTime; // Example endTime
+
+  // Parsing fromTime
+  // Parsing fromTime
+  const fromTimeParts = fromTime.split(/[\s:]+/); // Split by space or colon
+  let fromHour = parseInt(fromTimeParts[0]);
+  const fromMinute = parseInt(fromTimeParts[1]);
+  const fromPeriod = fromTimeParts[2].toUpperCase(); // Convert to uppercase for consistency
+
+  // Adjusting hour for PM time
+  if (fromPeriod === "PM" && fromHour < 12) {
+    fromHour += 12;
+  } else if (fromPeriod === "AM" && fromHour === 12) {
+    fromHour = 0; // Midnight (12 AM) is 0 in 24-hour format
+  }
+
+  // Parsing toTime
+  const toTimeParts = toTime.split(/[\s:]+/); // Split by space or colon
+  let toHour = parseInt(toTimeParts[0]);
+  const toMinute = parseInt(toTimeParts[1]);
+  const toPeriod = toTimeParts[2].toUpperCase(); // Convert to uppercase for consistency
+
+  // Adjusting hour for PM time
+  if (toPeriod === "PM" && toHour < 12) {
+    toHour += 12;
+  } else if (toPeriod === "AM" && toHour === 12) {
+    toHour = 0; // Midnight (12 AM) is 0 in 24-hour format
+  }
+
+  // Creating a new Date object for eventDate
+  const startDateTime = new Date(eventDate);
+  const endDateTime = new Date(eventDate);
+
+  // Setting the time components for startDateTime
+  startDateTime.setHours(fromHour);
+  startDateTime.setMinutes(fromMinute);
+
+  // Setting the time components for endDateTime
+  endDateTime.setHours(toHour);
+  endDateTime.setMinutes(toMinute);
+
+  //  google callender code
+  const DISCOVERY_DOC =
+    "https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest";
+  const SCOPES = "https://www.googleapis.com/auth/calendar";
+  const API_KEY = "AIzaSyDUUSAwXWs16ezr9OUfV0BJ_mQK49D9y8E";
+  const CLIENT_ID =
+    "715247830386-onprhn7rg284nv7v70uee2mdsm0rdpn6.apps.googleusercontent.com";
+  const [tokenClient, setTokenClient] = useState();
+  const [client, setClient] = useState();
+  useEffect(() => {
+    gapi.load("client:auth2", async () => {
+      await gapi.client.init({
+        clientId:
+          "715247830386-onprhn7rg284nv7v70uee2mdsm0rdpn6.apps.googleusercontent.com", // Replace with your actual client ID
+        scope: "https://www.googleapis.com/auth/calendar.events", // Adjust scope as needed
+      });
+    });
+  }, []);
+  const addCalendarEvent = (startTime, address, clientName) => {
+    const event = {
+      summary: eventData?.title,
+      location: eventData?.eventLocation,
+      description: "A chance to hear more about Google's developer products.",
+      start: {
+        dateTime: startDateTime.toISOString(),
+        timeZone: "Asia/Kolkata",
+      },
+      end: {
+        dateTime: endDateTime.toISOString(),
+        timeZone: "Asia/Kolkata",
+      },
+      recurrence: ["RRULE:FREQ=DAILY;COUNT=2"],
+      // attendees: [
+      //   { email: "lpage@example.com" },
+      //   { email: "sbrin@example.com" },
+      // ],
+      reminders: {
+        useDefault: false,
+        overrides: [
+          { method: "email", minutes: 24 * 60 },
+          { method: "popup", minutes: 10 },
+        ],
+      },
+    };
+    loadAsync("https://apis.google.com/js/client.js", "onload", "gapi").then(
+      (gapi) => {
+        gapi.client.load("calendar", "v3", function () {
+          const request = window.gapi.client.calendar.events.insert({
+            calendarId: "primary",
+            resource: event,
+          });
+
+          request.execute(function (event) {
+            console.log(event, " Main Response from Google api");
+            if (event?.status == "confirmed") {
+              setAddedCallender(!addedCallender);
+              console.log(addedCallender, "status is addred ");
+            }
+          });
+        });
+      }
+    );
+  };
+
+  function loadAsync(source, callbackParam, globalName) {
+    return new Promise((resolve, reject) => {
+      let callbackFunc = Math.random().toString(36);
+
+      window[callbackFunc] = () => {
+        resolve(window[globalName]);
+        delete window[callbackFunc];
+      };
+
+      let sep = source.includes("?") ? "&" : "?";
+      const script = document.createElement("script");
+      script.src = `${source}${sep}${encodeURIComponent(
+        callbackParam
+      )}=${encodeURIComponent(callbackFunc)}`;
+      document.body.appendChild(script);
+    });
+  }
+  const login = useGoogleLogin({
+    onSuccess: (tokenResponse) => {
+      console.log(tokenResponse);
+      addCalendarEvent("startTime", "address", "clientName");
+    },
+  });
+  return (
+    <>
+      <div
+        className={`${submit.thankyouWrap} gtmConnectHome ${
+          lightTheme && submit.lightTheme
+        }`}
+        id="gtmConnectHomeId"
+      >
+        <div className={submit.thankyou}>
+          <svg
+            width="253"
+            height="191"
+            viewBox="0 0 253 191"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              fill-rule="evenodd"
+              clip-rule="evenodd"
+              d="M125.999 102.459C104.713 102.459 87.457 119.715 87.457 141.001C87.457 162.287 104.713 179.542 125.999 179.542C147.285 179.542 164.54 162.287 164.54 141.001C164.54 119.715 147.285 102.459 125.999 102.459ZM81.207 141.001C81.207 116.263 101.261 96.209 125.999 96.209C150.736 96.209 170.79 116.263 170.79 141.001C170.79 165.738 150.736 185.792 125.999 185.792C101.261 185.792 81.207 165.738 81.207 141.001ZM146.958 126.291C148.179 127.511 148.179 129.49 146.958 130.71L121.958 155.71C120.738 156.931 118.759 156.931 117.539 155.71L105.039 143.21C103.819 141.99 103.819 140.011 105.039 138.791C106.259 137.571 108.238 137.571 109.458 138.791L119.749 149.081L142.539 126.291C143.759 125.071 145.738 125.071 146.958 126.291Z"
+              fill="#327950"
+            />
+            <path
+              d="M203.433 119.465C201.752 113.507 194.008 114.086 194.008 114.086L194.22 118.23C198.696 117.459 201.477 122.703 201.477 122.703L203.433 119.465Z"
+              fill="#327950"
+            />
+            <path
+              d="M39.1482 131.961C37.4672 126.003 29.7227 126.582 29.7227 126.582L29.935 130.726C34.4106 129.955 37.1921 135.199 37.1921 135.199L39.1482 131.961Z"
+              fill="#EAEAEA"
+            />
+            <path
+              d="M129.632 49.5443C138.614 52.2652 144.203 41.9059 144.203 41.9059L138.739 38.793C136.068 45.1381 127.098 44.4037 127.098 44.4037L129.632 49.5443Z"
+              fill="#EAEAEA"
+            />
+            <path
+              d="M79.7925 60.6953C75.6115 61.1394 75.1133 66.3862 75.1133 66.3862L77.91 66.7176C77.9056 63.6328 81.7357 62.372 81.7357 62.372L79.7925 60.6953Z"
+              fill="#327950"
+            />
+            <path
+              d="M252.099 99.0693C252.705 94.91 247.746 93.125 247.746 93.125L246.73 95.7527C249.72 96.5131 249.991 100.536 249.991 100.536L252.099 99.0693Z"
+              fill="#EAEAEA"
+            />
+            <path
+              d="M104.188 5.94431C104.795 1.78501 99.8363 0 99.8363 0L98.8203 2.62772C101.81 3.38809 102.081 7.41091 102.081 7.41091L104.188 5.94431Z"
+              fill="#327950"
+            />
+            <path
+              d="M0.894013 73.0355C0.142305 79.5561 8.78154 81.1353 8.78154 81.1353L10.3413 76.8677C5.15732 76.3998 4.40993 70.293 4.40993 70.293L0.894013 73.0355Z"
+              fill="#327950"
+            />
+            <path
+              d="M193.183 49.3989C197.379 49.6393 198.723 44.5398 198.723 44.5398L196.017 43.7578C195.521 46.8015 191.539 47.4254 191.539 47.4254L193.183 49.3989Z"
+              fill="#327950"
+            />
+            <path
+              d="M216.098 66.5215C216.098 66.7078 214.547 66.8595 212.634 66.8595C210.719 66.8595 209.168 66.7078 209.168 66.5215C209.168 66.3352 210.719 66.1836 212.634 66.1836C214.547 66.1836 216.098 66.3352 216.098 66.5215Z"
+              fill="#EAEAEA"
+            />
+            <path
+              d="M219.787 57.0957C219.973 57.0957 220.125 58.6706 220.125 60.6116C220.125 62.5526 219.973 64.1275 219.787 64.1275C219.601 64.1275 219.449 62.5526 219.449 60.6116C219.449 58.6706 219.599 57.0957 219.787 57.0957Z"
+              fill="#EAEAEA"
+            />
+            <path
+              d="M223.691 66.293C223.691 66.1067 225.242 65.9551 227.155 65.9551C229.07 65.9551 230.621 66.1067 230.621 66.293C230.621 66.4793 229.07 66.631 227.155 66.631C225.242 66.631 223.691 66.4793 223.691 66.293Z"
+              fill="#EAEAEA"
+            />
+            <path
+              d="M220.022 75.7174C219.835 75.7174 219.684 74.1425 219.684 72.2015C219.684 70.2605 219.835 68.6855 220.022 68.6855C220.208 68.6855 220.36 70.2605 220.36 72.2015C220.36 74.1446 220.208 75.7174 220.022 75.7174Z"
+              fill="#EAEAEA"
+            />
+            <path
+              d="M225.637 71.6715C225.494 71.7906 224.825 71.2274 224.144 70.4128C223.464 69.5983 223.029 68.8401 223.172 68.721C223.315 68.6018 223.982 69.1651 224.664 69.9796C225.344 70.7941 225.78 71.5523 225.637 71.6715Z"
+              fill="#EAEAEA"
+            />
+            <path
+              d="M225.294 60.9825C225.426 61.1147 224.962 61.7992 224.256 62.5119C223.55 63.2246 222.869 63.6947 222.737 63.5647C222.605 63.4326 223.069 62.7481 223.775 62.0353C224.481 61.3226 225.161 60.8526 225.294 60.9825Z"
+              fill="#EAEAEA"
+            />
+            <path
+              d="M217.368 63.7051C217.249 63.8481 216.606 63.5123 215.934 62.9512C215.26 62.3923 214.814 61.8204 214.933 61.6775C215.052 61.5345 215.696 61.8703 216.367 62.4313C217.039 62.9902 217.487 63.56 217.368 63.7051Z"
+              fill="#EAEAEA"
+            />
+            <path
+              d="M217.042 68.4109C217.181 68.5366 216.772 69.2103 216.133 69.9122C215.491 70.6163 214.859 71.0842 214.722 70.9585C214.584 70.8329 214.993 70.1613 215.634 69.4573C216.271 68.7554 216.904 68.2853 217.042 68.4109Z"
+              fill="#EAEAEA"
+            />
+            <path
+              d="M27.391 47.209C27.391 47.3954 25.8399 47.547 23.927 47.547C22.012 47.547 20.4609 47.3954 20.4609 47.209C20.4609 47.0227 22.012 46.8711 23.927 46.8711C25.8377 46.8711 27.391 47.0227 27.391 47.209Z"
+              fill="#327950"
+            />
+            <path
+              d="M31.0723 37.7871C31.2586 37.7871 31.4103 39.362 31.4103 41.303C31.4103 43.244 31.2586 44.8189 31.0723 44.8189C30.886 44.8189 30.7344 43.244 30.7344 41.303C30.7344 39.362 30.886 37.7871 31.0723 37.7871Z"
+              fill="#327950"
+            />
+            <path
+              d="M34.9922 46.9786C34.9922 46.7923 36.5433 46.6406 38.4561 46.6406C40.3711 46.6406 41.9222 46.7923 41.9222 46.9786C41.9222 47.1649 40.3711 47.3165 38.4561 47.3165C36.5433 47.3165 34.9922 47.1649 34.9922 46.9786Z"
+              fill="#327950"
+            />
+            <path
+              d="M31.3028 56.4146C31.1165 56.4146 30.9648 54.8397 30.9648 52.8987C30.9648 50.9577 31.1165 49.3828 31.3028 49.3828C31.4891 49.3828 31.6407 50.9577 31.6407 52.8987C31.6407 54.8419 31.4891 56.4146 31.3028 56.4146Z"
+              fill="#327950"
+            />
+            <path
+              d="M36.9004 52.3629C36.7574 52.482 36.088 51.9188 35.41 51.1042C34.7298 50.2897 34.2944 49.5315 34.4373 49.4124C34.5803 49.2932 35.2475 49.8565 35.9277 50.671C36.6101 51.4855 37.0434 52.2437 36.9004 52.3629Z"
+              fill="#327950"
+            />
+            <path
+              d="M36.5887 41.6707C36.7209 41.8028 36.2573 42.4874 35.551 43.2001C34.8448 43.9128 34.1646 44.3829 34.0303 44.2529C33.8982 44.1208 34.3617 43.4362 35.0701 42.7235C35.7742 42.0086 36.4544 41.5385 36.5887 41.6707Z"
+              fill="#327950"
+            />
+            <path
+              d="M28.6339 44.3926C28.5147 44.5356 27.8713 44.1998 27.1998 43.6387C26.5261 43.0798 26.0798 42.5079 26.1989 42.365C26.3181 42.222 26.9615 42.5578 27.633 43.1188C28.3046 43.6777 28.7552 44.2475 28.6339 44.3926Z"
+              fill="#327950"
+            />
+            <path
+              d="M28.322 49.1043C28.4607 49.23 28.0534 49.9037 27.41 50.6056C26.7688 51.3096 26.1362 51.7775 25.9997 51.6519C25.8611 51.5262 26.2684 50.8547 26.9118 50.1506C27.553 49.4488 28.1855 48.9787 28.322 49.1043Z"
+              fill="#327950"
+            />
+          </svg>
+
+          <h2 className={`${submit.submitHeading} mt20 gtmGotitApplied`}>
+            Thank you for <br />
+            registering!
+          </h2>
+          <p className={`${submit.submitText} mt5`}>
+            Your form has been submitted successfully.
+          </p>
+          {eventData._id == "65e1c3a02c6ccb01099b2fcb" ? (
+            <>
+              <Button
+                gradientButton={"whiteHover"}
+                src={"/assets/svg/simplecalendar.svg"}
+                className={`mt40 invert1 ${styles.heroBtn} ${styles.admissionButton}`}
+                name={
+                  addedCallender
+                    ? "Added To Calender"
+                    : "Add to my Google Calendar"
+                }
+                onClick={login}
+                disabled={addedCallender}
+              />
+            </>
+          ) : (
+            <></>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
